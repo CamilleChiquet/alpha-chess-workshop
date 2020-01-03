@@ -3,5 +3,5 @@ keras
 profilehooks
 numpy
 pyperclip
-python-chess
+python-chess=0.22.2
 h5py

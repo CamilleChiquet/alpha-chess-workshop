@@ -9,7 +9,7 @@ __pycache__
 *.pkl
 *.csv
 *.gz
-/data/play_data/
+*.json
 /data/model/next_generation/
 .ipynb_checkpoints/
 tmp/
