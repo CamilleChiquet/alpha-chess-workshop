@@ -83,7 +83,7 @@ class SelfPlayWorker:
 		:return ChessModel: current best model
 		"""
 		model = ChessModel(self.config)
-		if self.config.opts.new or not load_best_model_weight(model):
+		if not load_best_model_weight(model):
 			model.build()
 			save_as_best_model(model)
 		return model
