@@ -4,6 +4,7 @@ Various helper functions for working with the data used in this app
 
 import json
 import os
+import pickle
 from datetime import datetime
 from glob import glob
 from logging import getLogger
@@ -34,8 +35,11 @@ def find_pgn_files(directory, pattern='*.pgn'):
 
 
 def get_game_data_filenames(rc: ResourceConfig):
-	pattern = os.path.join(rc.play_data_dir, rc.play_data_filename_tmpl % "*")
+	file_ext = "_fen.pickle"
+	pattern = os.path.join(rc.play_data_dir, rc.play_data_filename_tmpl % "*" + file_ext)
 	files = list(sorted(glob(pattern)))
+	for i in range(len(files)):
+		files[i] = files[i][:-len(file_ext)]
 	return files
 
 
@@ -45,17 +49,11 @@ def get_next_generation_model_dirs(rc: ResourceConfig):
 	return dirs
 
 
-def write_game_data_to_file(path, data):
-	try:
-		with open(path, "wt") as f:
-			json.dump(data, f)
-	except Exception as e:
-		print(e)
+def save_as_pickle_object(path, data):
+	with open(path, 'wb') as f:
+		pickle.dump(data, f)
 
 
-def read_game_data_from_file(path):
-	try:
-		with open(path, "rt") as f:
-			return json.load(f)
-	except Exception as e:
-		print(e)
+def read_pickle_object(path):
+	with open(path, "rb") as f:
+		return pickle.load(f)

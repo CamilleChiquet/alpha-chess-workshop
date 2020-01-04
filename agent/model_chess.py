@@ -129,8 +129,7 @@ class ChessModel:
 		:param str weight_path: path to the file containing the model weights
 		:return: true iff successful in loading
 		"""
-		mc = self.config.model
-		resources = self.config.resource
+
 		if os.path.exists(config_path):
 			logger.debug(f"loading model from {config_path}")
 			with open(config_path, "rt") as f:

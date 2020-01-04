@@ -15,7 +15,7 @@ from keras.optimizers import Adam
 from agent.model_chess import ChessModel
 from config import Config
 from env.chess_env import canon_input_planes, is_black_turn, testeval
-from lib.data_helper import get_game_data_filenames, read_game_data_from_file, get_next_generation_model_dirs
+from lib.data_helper import get_game_data_filenames, read_pickle_object, get_next_generation_model_dirs
 from lib.model_helper import load_best_model_weight
 
 logger = getLogger(__name__)
@@ -90,7 +90,8 @@ class OptimizeWorker:
 		                     epochs=epochs,
 		                     shuffle=True,
 		                     validation_split=0.02,
-		                     callbacks=[tensorboard_cb])
+		                     callbacks=[tensorboard_cb],
+		                     verbose=2)
 		steps = (state_ary.shape[0] // tc.batch_size) * epochs
 		return steps
 
@@ -170,11 +171,13 @@ class OptimizeWorker:
 
 
 def load_data_from_file(filename):
-	data = read_game_data_from_file(filename)
-	return convert_to_cheating_data(data)
+	print(filename)
+	return convert_to_cheating_data(fen_data=read_pickle_object(filename + "_fen.pickle"),
+	                                moves_data=np.load(filename + "_moves.npy", allow_pickle=True),
+	                                scores_data=np.load(filename + "_scores.npy", allow_pickle=True))
 
 
-def convert_to_cheating_data(data):
+def convert_to_cheating_data(fen_data: list, moves_data: np.ndarray, scores_data: np.ndarray):
 	"""
 	:param data: format is SelfPlayWorker.buffer
 	:return:
@@ -182,20 +185,23 @@ def convert_to_cheating_data(data):
 	state_list = []
 	policy_list = []
 	value_list = []
-	for state_fen, policy, value in data:
+	nb_games = len(fen_data)
+	for game_index in range(nb_games):
+		for move_index in range(len(fen_data[game_index])):
+			state_fen, policy, value = fen_data[game_index][move_index], moves_data[game_index][move_index], \
+			                           scores_data[game_index][move_index]
 
-		state_planes = canon_input_planes(state_fen)
+			state_planes = canon_input_planes(state_fen)
 
-		if is_black_turn(state_fen):
-			policy = Config.flip_policy(policy)
+			if is_black_turn(state_fen):
+				policy = Config.flip_policy(policy)
 
-		move_number = int(state_fen.split(' ')[5])
-		value_certainty = min(5, move_number) / 5  # reduces the noise of the opening... plz train faster
-		sl_value = value * value_certainty + testeval(state_fen, False) * (1 - value_certainty)
+			move_number = int(state_fen.split(' ')[5])
+			value_certainty = min(5, move_number) / 5  # reduces the noise of the opening... plz train faster
+			sl_value = value * value_certainty + testeval(state_fen, False) * (1 - value_certainty)
 
-		state_list.append(state_planes)
-		policy_list.append(policy)
-		value_list.append(sl_value)
+			state_list.append(state_planes)
+			policy_list.append(policy)
+			value_list.append(sl_value)
 
-	return np.asarray(state_list, dtype=np.float32), np.asarray(policy_list, dtype=np.float32), np.asarray(value_list,
-	                                                                                                       dtype=np.float32)
+	return np.asarray(state_list, dtype=np.float32), np.asarray(policy_list, dtype=np.float32), np.asarray(value_list, dtype=np.float32)

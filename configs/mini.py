@@ -16,13 +16,13 @@ class EvaluateConfig:
 		self.play_config.tau_decay_rate = 0.6  # I need a better distribution...
 		self.play_config.noise_eps = 0
 		self.evaluate_latest_first = True
-		self.max_game_length = 1000
+		self.max_game_length = 1_000
 
 
 class PlayDataConfig:
 	def __init__(self):
 		self.min_elo_policy = 500  # 0 weight
-		self.max_elo_policy = 1800  # 1 weight
+		self.max_elo_policy = 4_000  # 1 weight
 		self.sl_nb_game_in_file = 250
 		self.nb_game_in_file = 50
 		self.max_file_num = 150
@@ -43,7 +43,7 @@ class PlayConfig:
 		self.virtual_loss = 3
 		self.resign_threshold = -0.8
 		self.min_resign_turn = 5
-		self.max_game_length = 1000
+		self.max_game_length = 1_000
 
 
 class TrainerConfig:
@@ -53,7 +53,7 @@ class TrainerConfig:
 		self.vram_frac = 1.0
 		self.batch_size = 256  # tune this to your gpu memory
 		self.epoch_to_checkpoint = 1
-		self.dataset_size = 100000
+		self.dataset_size = 100_000
 		self.start_total_steps = 0
 		self.save_model_steps = 25
 		self.load_data_steps = 100

@@ -142,7 +142,7 @@ class ChessPlayer:
 			# noinspection PyTypeChecker
 			return None
 		else:
-			self.moves.append([env.observation, list(policy)])
+			self.moves.append([env.observation, policy])
 			return self.config.labels[my_action]
 
 	def search_moves(self, env) -> (float, float):
@@ -349,7 +349,7 @@ class ChessPlayer:
 		k = self.move_lookup[chess.Move.from_uci(my_action)]
 		policy[k] = weight
 
-		self.moves.append([observation, list(policy)])
+		self.moves.append([observation, policy])
 		return my_action
 
 	def finish_game(self, z):

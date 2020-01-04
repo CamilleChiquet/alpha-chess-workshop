@@ -21,3 +21,5 @@ tmp.*
 video/*
 logs/
 *.sh
+*.pickle
+*.npy

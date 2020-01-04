@@ -8,13 +8,14 @@ from datetime import datetime
 from logging import getLogger
 from threading import Thread
 from time import time
+import numpy as np
 
 import chess.pgn
 
 from agent.player_chess import ChessPlayer
 from config import Config
 from env.chess_env import ChessEnv, Winner
-from lib.data_helper import write_game_data_to_file, find_pgn_files
+from lib.data_helper import save_as_pickle_object, find_pgn_files
 
 logger = getLogger(__name__)
 
@@ -42,13 +43,17 @@ class SupervisedLearningWorker:
 		:param config:
 		"""
 		self.config = config
-		self.buffer = []
+		self.fen_buffer = []
+		self.moves_buffer = []
+		self.scores_buffer = []
 
 	def start(self):
 		"""
 		Start the actual training.
 		"""
-		self.buffer = []
+		self.fen_buffer = []
+		self.moves_buffer = []
+		self.scores_buffer = []
 		# noinspection PyAttributeOutsideInit
 		self.idx = 0
 		start_time = time()
@@ -57,8 +62,8 @@ class SupervisedLearningWorker:
 			for res in as_completed(
 					[executor.submit(get_buffer, self.config, game) for game in games]):  # poisoned reference (memleak)
 				self.idx += 1
-				env, data = res.result()
-				self.save_data(data)
+				env, fen_data, moves_array, scores_array = res.result()
+				self.save_data(fen_data, moves_array, scores_array)
 				end_time = time()
 				logger.debug(f"game {self.idx:4} time={(end_time - start_time):.3f}s "
 				             f"halfmoves={env.num_halfmoves:3} {env.winner:12}"
@@ -66,7 +71,7 @@ class SupervisedLearningWorker:
 				             f"{env.observation.split(' ')[0]}")
 				start_time = end_time
 
-		if len(self.buffer) > 0:
+		if len(self.fen_buffer) > 0:
 			self.flush_buffer()
 
 	def get_games_from_all_files(self):
@@ -82,14 +87,16 @@ class SupervisedLearningWorker:
 		print("done reading")
 		return games
 
-	def save_data(self, data):
+	def save_data(self, fen_data: list, moves_array: np.ndarray, scores_array: np.ndarray):
 		"""
 
-		:param (str,list(float)) data: a FEN encoded game state and a list where every index corresponds
+		:param (str,list(float)) data: a FEN encoded game state and a numpy array where every index corresponds
 			to a chess move. The move that was taken in the actual game is given a value (based on
 			the player elo), all other moves are given a 0.
 		"""
-		self.buffer += data
+		self.fen_buffer.append(fen_data)
+		self.moves_buffer.append(moves_array)
+		self.scores_buffer.append(scores_array)
 		if self.idx % self.config.play_data.sl_nb_game_in_file == 0:
 			self.flush_buffer()
 
@@ -101,9 +108,13 @@ class SupervisedLearningWorker:
 		game_id = datetime.now().strftime("%Y%m%d-%H%M%S.%f")
 		path = os.path.join(rc.play_data_dir, rc.play_data_filename_tmpl % game_id)
 		logger.info(f"save play data to {path}")
-		thread = Thread(target=write_game_data_to_file, args=(path, self.buffer))
-		thread.start()
-		self.buffer = []
+		save_as_pickle_object(path + "_fen.pickle", self.fen_buffer)
+		np.save(path + "_moves.npy", self.moves_buffer)
+		np.save(path + "_scores.npy", self.scores_buffer)
+		del self.fen_buffer, self.moves_buffer, self.scores_buffer
+		self.fen_buffer = []
+		self.moves_buffer = []
+		self.scores_buffer = []
 
 
 def get_games_from_file(filename):
@@ -173,10 +184,16 @@ def get_buffer(config, game) -> (ChessEnv, list):
 	black.finish_game(black_win)
 	white.finish_game(-black_win)
 
-	data = []
+	fen_data = []
+	moves_array = np.zeros((len(white.moves) + len(black.moves), white.labels_n), dtype=np.float16)
+	scores = np.zeros((len(white.moves) + len(black.moves)), dtype=np.int8)
 	for i in range(len(white.moves)):
-		data.append(white.moves[i])
+		fen_data.append(white.moves[i][0])
+		moves_array[i*2] = white.moves[i][1]
+		scores[i*2] = white.moves[i][2]
 		if i < len(black.moves):
-			data.append(black.moves[i])
+			fen_data.append(black.moves[i][0])
+			moves_array[i*2 + 1] = black.moves[i][1]
+			scores[i*2 + 1] = black.moves[i][2]
 
-	return env, data
+	return env, fen_data, moves_array, scores

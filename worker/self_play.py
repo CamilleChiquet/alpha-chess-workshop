@@ -7,16 +7,16 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from logging import getLogger
 from multiprocessing import Manager
-from threading import Thread
 from time import time
+
+import numpy as np
 
 from agent.model_chess import ChessModel
 from agent.player_chess import ChessPlayer
 from config import Config
 from env.chess_env import ChessEnv, Winner
-from lib.data_helper import get_game_data_filenames, write_game_data_to_file, pretty_print
-from lib.model_helper import load_best_model_weight, save_as_best_model, \
-	reload_best_model_weight_if_changed
+from lib.data_helper import save_as_pickle_object, pretty_print
+from lib.model_helper import load_best_model_weight, save_as_best_model, reload_best_model_weight_if_changed
 
 logger = getLogger(__name__)
 
@@ -46,13 +46,17 @@ class SelfPlayWorker:
 		self.m = Manager()
 		self.cur_pipes = self.m.list([self.current_model.get_pipes(self.config.play.search_threads) for _ in
 		                              range(self.config.play.max_processes)])
-		self.buffer = []
+		self.fen_buffer = []
+		self.moves_buffer = []
+		self.scores_buffer = []
 
 	def start(self):
 		"""
 		Do self play and write the data to the appropriate file.
 		"""
-		self.buffer = []
+		self.fen_buffer = []
+		self.moves_buffer = []
+		self.scores_buffer = []
 
 		futures = deque()
 		with ProcessPoolExecutor(max_workers=self.config.play.max_processes) as executor:
@@ -62,13 +66,16 @@ class SelfPlayWorker:
 			while True:
 				game_idx += 1
 				start_time = time()
-				env, data = futures.popleft().result()
+				env, fen_data, moves_array, scores_array = futures.popleft().result()
+				self.save_data(fen_data, moves_array, scores_array)
 				print(f"game {game_idx:3} time={time() - start_time:5.1f}s "
 				      f"halfmoves={env.num_halfmoves:3} {env.winner:12} "
 				      f"{'by resign ' if env.resigned else '          '}")
 
 				pretty_print(env, ("current_model", "current_model"))
-				self.buffer += data
+				self.fen_buffer += fen_data
+				self.moves_buffer += moves_array
+				self.scores_buffer += scores_array
 				if (game_idx % self.config.play_data.nb_game_in_file) == 0:
 					self.flush_buffer()
 					reload_best_model_weight_if_changed(self.current_model)
@@ -96,19 +103,13 @@ class SelfPlayWorker:
 		game_id = datetime.now().strftime("%Y%m%d-%H%M%S.%f")
 		path = os.path.join(rc.play_data_dir, rc.play_data_filename_tmpl % game_id)
 		logger.info(f"save play data to {path}")
-		thread = Thread(target=write_game_data_to_file, args=(path, self.buffer))
-		thread.start()
-		self.buffer = []
-
-	def remove_play_data(self):
-		"""
-		Delete the play data from disk
-		"""
-		files = get_game_data_filenames(self.config.resource)
-		if len(files) < self.config.play_data.max_file_num:
-			return
-		for i in range(len(files) - self.config.play_data.max_file_num):
-			os.remove(files[i])
+		save_as_pickle_object(path + "_fen.pickle", self.fen_buffer)
+		np.save(path + "_moves.npy", self.moves_buffer)
+		np.save(path + "_scores.npy", self.scores_buffer)
+		del self.fen_buffer, self.moves_buffer, self.scores_buffer
+		self.fen_buffer = []
+		self.moves_buffer = []
+		self.scores_buffer = []
 
 
 def self_play_buffer(config, cur) -> (ChessEnv, list):
@@ -145,11 +146,18 @@ def self_play_buffer(config, cur) -> (ChessEnv, list):
 	black.finish_game(black_win)
 	white.finish_game(-black_win)
 
-	data = []
-	for i in range(len(white.moves)):
-		data.append(white.moves[i])
-		if i < len(black.moves):
-			data.append(black.moves[i])
-
 	cur.append(pipes)
-	return env, data
+
+	fen_data = []
+	moves_array = np.zeros((len(white.moves) + len(black.moves), white.labels_n), dtype=np.float16)
+	scores = np.zeros((len(white.moves) + len(black.moves)), dtype=np.int8)
+	for i in range(len(white.moves)):
+		fen_data.append(white.moves[i][0])
+		moves_array[i*2] = white.moves[i][1]
+		scores[i*2] = white.moves[i][2]
+		if i < len(black.moves):
+			fen_data.append(black.moves[i][0])
+			moves_array[i*2 + 1] = black.moves[i][1]
+			scores[i*2 + 1] = black.moves[i][2]
+
+	return env, fen_data, moves_array, scores
