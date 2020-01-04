@@ -67,7 +67,6 @@ class SelfPlayWorker:
 				game_idx += 1
 				start_time = time()
 				env, fen_data, moves_array, scores_array = futures.popleft().result()
-				self.save_data(fen_data, moves_array, scores_array)
 				print(f"game {game_idx:3} time={time() - start_time:5.1f}s "
 				      f"halfmoves={env.num_halfmoves:3} {env.winner:12} "
 				      f"{'by resign ' if env.resigned else '          '}")
