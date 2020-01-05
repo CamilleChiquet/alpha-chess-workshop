@@ -89,7 +89,7 @@ class OptimizeWorker:
 		                     batch_size=tc.batch_size,
 		                     epochs=epochs,
 		                     shuffle=True,
-		                     validation_split=0.02,
+		                     validation_split=0.1,
 		                     callbacks=[tensorboard_cb],
 		                     verbose=2)
 		steps = (state_ary.shape[0] // tc.batch_size) * epochs
@@ -171,7 +171,6 @@ class OptimizeWorker:
 
 
 def load_data_from_file(filename):
-	print(filename)
 	return convert_to_cheating_data(fen_data=read_pickle_object(filename + "_fen.pickle"),
 	                                moves_data=np.load(filename + "_moves.npy", allow_pickle=True),
 	                                scores_data=np.load(filename + "_scores.npy", allow_pickle=True))
