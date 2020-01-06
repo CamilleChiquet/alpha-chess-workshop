@@ -6,11 +6,10 @@ import re
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from logging import getLogger
-from threading import Thread
 from time import time
-import numpy as np
 
 import chess.pgn
+import numpy as np
 
 from agent.player_chess import ChessPlayer
 from config import Config
@@ -58,34 +57,25 @@ class SupervisedLearningWorker:
 		self.idx = 0
 		start_time = time()
 		with ProcessPoolExecutor(max_workers=7) as executor:
-			games = self.get_games_from_all_files()
-			for res in as_completed(
-					[executor.submit(get_buffer, self.config, game) for game in games]):  # poisoned reference (memleak)
-				self.idx += 1
-				env, fen_data, moves_array, scores_array = res.result()
-				self.save_data(fen_data, moves_array, scores_array)
-				end_time = time()
-				logger.debug(f"game {self.idx:4} time={(end_time - start_time):.3f}s "
-				             f"halfmoves={env.num_halfmoves:3} {env.winner:12}"
-				             f"{' by resign ' if env.resigned else '           '}"
-				             f"{env.observation.split(' ')[0]}")
-				start_time = end_time
+			files = find_pgn_files(self.config.resource.play_data_dir)
+			print(files)
+			for filename in files:
+				games = get_games_from_file(filename)
+				print("done reading")
+				for res in as_completed([executor.submit(get_buffer, self.config, game) for game in
+				                         games]):  # poisoned reference (memleak)
+					self.idx += 1
+					env, fen_data, moves_array, scores_array = res.result()
+					self.save_data(fen_data, moves_array, scores_array)
+					end_time = time()
+					# logger.debug(f"game {self.idx:4} time={(end_time - start_time):.3f}s "
+					#              f"halfmoves={env.num_halfmoves:3} {env.winner:12}"
+					#              f"{' by resign ' if env.resigned else '           '}"
+					#              f"{env.observation.split(' ')[0]}")
+					start_time = end_time
 
 		if len(self.fen_buffer) > 0:
 			self.flush_buffer()
-
-	def get_games_from_all_files(self):
-		"""
-		Loads game data from pgn files
-		:return list(chess.pgn.Game): the games
-		"""
-		files = find_pgn_files(self.config.resource.play_data_dir)
-		print(files)
-		games = []
-		for filename in files:
-			games.extend(get_games_from_file(filename))
-		print("done reading")
-		return games
 
 	def save_data(self, fen_data: list, moves_array: np.ndarray, scores_array: np.ndarray):
 		"""
@@ -189,11 +179,11 @@ def get_buffer(config, game) -> (ChessEnv, list):
 	scores = np.zeros((len(white.moves) + len(black.moves)), dtype=np.int8)
 	for i in range(len(white.moves)):
 		fen_data.append(white.moves[i][0])
-		moves_array[i*2] = white.moves[i][1]
-		scores[i*2] = white.moves[i][2]
+		moves_array[i * 2] = white.moves[i][1]
+		scores[i * 2] = white.moves[i][2]
 		if i < len(black.moves):
 			fen_data.append(black.moves[i][0])
-			moves_array[i*2 + 1] = black.moves[i][1]
-			scores[i*2 + 1] = black.moves[i][2]
+			moves_array[i * 2 + 1] = black.moves[i][1]
+			scores[i * 2 + 1] = black.moves[i][2]
 
 	return env, fen_data, moves_array, scores
