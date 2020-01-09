@@ -63,18 +63,19 @@ class OptimizeWorker:
 		self.compile_model()
 		self.filenames = deque(get_game_data_filenames(self.config.resource))
 		shuffle(self.filenames)
-		total_steps = self.config.trainer.start_total_steps
+		all_data_seen_nb_times = 0
 
 		while True:
 			self.fill_queue()
-			steps = self.train_epoch(self.config.trainer.epoch_to_checkpoint)
-			total_steps += steps
+			self.train_epoch(self.config.trainer.epoch_to_checkpoint)
 			self.save_current_model()
-			a, b, c = self.dataset
-			while len(a) > self.config.trainer.dataset_size / 2:
-				a.popleft()
-				b.popleft()
-				c.popleft()
+			del self.dataset
+			self.dataset = deque(), deque(), deque()
+			if len(self.filenames) == 0:
+				all_data_seen_nb_times += 1
+				self.filenames = deque(get_game_data_filenames(self.config.resource))
+				shuffle(self.filenames)
+				logger.debug(f"!!! All dataset as been seen {all_data_seen_nb_times} time(s) !!!")
 
 	def train_epoch(self, epochs):
 		"""
@@ -84,16 +85,14 @@ class OptimizeWorker:
 		"""
 		tc = self.config.trainer
 		state_ary, policy_ary, value_ary = self.collect_all_loaded_data()
-		tensorboard_cb = TensorBoard(log_dir="./logs", batch_size=tc.batch_size, histogram_freq=1)
+		# tensorboard_cb = TensorBoard(log_dir="./logs", batch_size=tc.batch_size, histogram_freq=1)
 		self.model.model.fit(state_ary, [policy_ary, value_ary],
 		                     batch_size=tc.batch_size,
 		                     epochs=epochs,
 		                     shuffle=True,
-		                     validation_split=0.1,
-		                     callbacks=[tensorboard_cb],
+		                     validation_split=0.02,
+		                     # callbacks=[tensorboard_cb],
 		                     verbose=2)
-		steps = (state_ary.shape[0] // tc.batch_size) * epochs
-		return steps
 
 	def compile_model(self):
 		"""
@@ -121,18 +120,22 @@ class OptimizeWorker:
 		"""
 		futures = deque()
 		with ProcessPoolExecutor(max_workers=self.config.trainer.cleaning_processes) as executor:
+			# Loading parallelisation
 			for _ in range(self.config.trainer.cleaning_processes):
 				if len(self.filenames) == 0:
 					break
 				filename = self.filenames.popleft()
 				logger.debug(f"loading data from {filename}")
+				logger.debug(f"\t{len(self.filenames)} files remaining")
 				futures.append(executor.submit(load_data_from_file, filename))
+
 			while futures and len(self.dataset[0]) < self.config.trainer.dataset_size:
 				for x, y in zip(self.dataset, futures.popleft().result()):
 					x.extend(y)
 				if len(self.filenames) > 0:
 					filename = self.filenames.popleft()
 					logger.debug(f"loading data from {filename}")
+					logger.debug(f"\t{len(self.filenames)} files remaining")
 					futures.append(executor.submit(load_data_from_file, filename))
 
 	def collect_all_loaded_data(self):
@@ -203,4 +206,5 @@ def convert_to_cheating_data(fen_data: list, moves_data: np.ndarray, scores_data
 			policy_list.append(policy)
 			value_list.append(sl_value)
 
-	return np.asarray(state_list, dtype=np.float32), np.asarray(policy_list, dtype=np.float32), np.asarray(value_list, dtype=np.float32)
+	return np.asarray(state_list, dtype=np.float32), np.asarray(policy_list, dtype=np.float32),\
+	       np.asarray(value_list, dtype=np.float32)

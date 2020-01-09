@@ -12,5 +12,5 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
-	args = {"type": "normal", "cmd": "sl", "total_step": 10}
+	args = {"type": "normal", "cmd": "sl"}
 	manager.start(args)

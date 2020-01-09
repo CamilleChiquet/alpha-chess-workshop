@@ -142,7 +142,8 @@ class ChessModel:
 			return True
 		else:
 			logger.debug(f"model files does not exist at {config_path} and {weight_path}")
-			return False
+			self.build()
+			return True
 
 	def save(self, config_path, weight_path):
 		"""

@@ -170,6 +170,7 @@ class ChessEnv:
 
 
 def testeval(fen, absolute=False) -> float:
+	# TODO : Try official values
 	piece_vals = {'K': 3, 'Q': 14, 'R': 5, 'B': 3.25, 'N': 3, 'P': 1}  # somehow it doesn't know how to keep its queen
 	ans = 0.0
 	tot = 0
@@ -187,6 +188,7 @@ def testeval(fen, absolute=False) -> float:
 	if not absolute and is_black_turn(fen):
 		v = -v
 	assert abs(v) < 1
+	# TODO : to change
 	return np.tanh(v * 3)  # arbitrary
 
 

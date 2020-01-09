@@ -6,7 +6,6 @@ version of the agent that is easier and quicker to run locally
 
 class EvaluateConfig:
 	def __init__(self):
-		self.vram_frac = 1.0
 		self.game_num = 50
 		self.replace_rate = 0.55
 		self.play_config = PlayConfig()
@@ -31,7 +30,6 @@ class PlayConfig:
 	def __init__(self):
 		self.max_processes = 3
 		self.search_threads = 16
-		self.vram_frac = 1.0
 		self.simulation_num_per_move = 100
 		self.thinking_loop = 1
 		self.logging_thinking = False
@@ -47,15 +45,10 @@ class PlayConfig:
 
 class TrainerConfig:
 	def __init__(self):
-		self.min_data_size_to_learn = 0
 		self.cleaning_processes = 5  # RAM explosion...
-		self.vram_frac = 1.0
 		self.batch_size = 256  # tune this to your gpu memory
 		self.epoch_to_checkpoint = 1
 		self.dataset_size = 100_000
-		self.start_total_steps = 0
-		self.save_model_steps = 25
-		self.load_data_steps = 100
 		self.loss_weights = [1.25, 1.0]  # [policy, value] prevent value overfit in SL
 
 

@@ -5,7 +5,6 @@ Contains the set of configs to use for the "normal" version of the app.
 
 class EvaluateConfig:
 	def __init__(self):
-		self.vram_frac = 1.0
 		self.game_num = 50
 		self.replace_rate = 0.55
 		self.play_config = PlayConfig()
@@ -21,7 +20,7 @@ class EvaluateConfig:
 class PlayDataConfig:
 	def __init__(self):
 		self.min_elo_policy = 500  # 0 weight
-		self.max_elo_policy = 2_000  # 1 weight
+		self.max_elo_policy = 1_800  # 1 weight
 		self.sl_nb_game_in_file = 250
 		self.nb_game_in_file = 50
 
@@ -30,7 +29,6 @@ class PlayConfig:
 	def __init__(self):
 		self.max_processes = 3
 		self.search_threads = 16
-		self.vram_frac = 1.0
 		self.simulation_num_per_move = 800
 		self.thinking_loop = 1
 		self.logging_thinking = False
@@ -46,15 +44,10 @@ class PlayConfig:
 
 class TrainerConfig:
 	def __init__(self):
-		self.min_data_size_to_learn = 0
 		self.cleaning_processes = 5  # RAM explosion...
-		self.vram_frac = 1.0
 		self.batch_size = 256  # tune this to your gpu memory
 		self.epoch_to_checkpoint = 1
 		self.dataset_size = 100_000
-		self.start_total_steps = 0
-		self.save_model_steps = 25
-		self.load_data_steps = 100
 		self.loss_weights = [1.25, 1.0]  # [policy, value] prevent value overfit in SL
 
 
@@ -62,7 +55,7 @@ class ModelConfig:
 	cnn_filter_num = 256
 	cnn_first_filter_size = 5
 	cnn_filter_size = 3
-	res_layer_num = 7
+	res_layer_num = 10
 	l2_reg = 1e-4
 	value_fc_size = 256
 	input_depth = 18

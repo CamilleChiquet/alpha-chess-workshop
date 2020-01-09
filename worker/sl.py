@@ -53,9 +53,7 @@ class SupervisedLearningWorker:
 		self.fen_buffer = []
 		self.moves_buffer = []
 		self.scores_buffer = []
-		# noinspection PyAttributeOutsideInit
 		self.idx = 0
-		start_time = time()
 		with ProcessPoolExecutor(max_workers=7) as executor:
 			files = find_pgn_files(self.config.resource.play_data_dir)
 			print(files)
@@ -67,12 +65,6 @@ class SupervisedLearningWorker:
 					self.idx += 1
 					env, fen_data, moves_array, scores_array = res.result()
 					self.save_data(fen_data, moves_array, scores_array)
-					end_time = time()
-					# logger.debug(f"game {self.idx:4} time={(end_time - start_time):.3f}s "
-					#              f"halfmoves={env.num_halfmoves:3} {env.winner:12}"
-					#              f"{' by resign ' if env.resigned else '           '}"
-					#              f"{env.observation.split(' ')[0]}")
-					start_time = end_time
 
 		if len(self.fen_buffer) > 0:
 			self.flush_buffer()
@@ -145,6 +137,7 @@ def get_buffer(config, game) -> (ChessEnv, list):
 	white_elo, black_elo = int(game.headers["WhiteElo"]), int(game.headers["BlackElo"])
 	white_weight = clip_elo_policy(config, white_elo)
 	black_weight = clip_elo_policy(config, black_elo)
+	# TODO : try with weights of 1, whatever the elo rank is
 
 	actions = []
 	while not game.is_end():
