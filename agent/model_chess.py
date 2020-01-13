@@ -122,7 +122,7 @@ class ChessModel:
 				m.update(f.read())
 			return m.hexdigest()
 
-	def load(self, config_path, weight_path):
+	def load(self, config_path, weight_path, continue_training: bool = True):
 		"""
 
 		:param str config_path: path to the file containing the entire configuration
@@ -130,7 +130,7 @@ class ChessModel:
 		:return: true iff successful in loading
 		"""
 
-		if os.path.exists(config_path):
+		if os.path.exists(config_path) and continue_training:
 			logger.debug(f"loading model from {config_path}")
 			with open(config_path, "rt") as f:
 				self.model = Model.from_config(json.load(f))

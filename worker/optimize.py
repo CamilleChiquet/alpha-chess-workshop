@@ -21,12 +21,12 @@ from lib.model_helper import load_best_model_weight
 logger = getLogger(__name__)
 
 
-def start(config: Config):
+def start(config: Config, continue_training: bool = False):
 	"""
 	Helper method which just kicks off the optimization using the specified config
 	:param Config config: config to use
 	"""
-	return OptimizeWorker(config).start()
+	return OptimizeWorker(config).start(continue_training)
 
 
 class OptimizeWorker:
@@ -49,11 +49,11 @@ class OptimizeWorker:
 		self.dataset = deque(), deque(), deque()
 		self.executor = ProcessPoolExecutor(max_workers=config.trainer.cleaning_processes)
 
-	def start(self):
+	def start(self, continue_training: bool = False):
 		"""
 		Load the next generation model from disk and start doing the training endlessly.
 		"""
-		self.model = self.load_model()
+		self.model = self.load_model(continue_training)
 		self.training()
 
 	def training(self):
@@ -65,9 +65,12 @@ class OptimizeWorker:
 		shuffle(self.filenames)
 		all_data_seen_nb_times = 0
 
+		epochs = 0
 		while True:
 			self.fill_queue()
 			self.train_epoch(self.config.trainer.epoch_to_checkpoint)
+			epochs += self.config.trainer.epoch_to_checkpoint
+			print(f"======= Epoch : {epochs} =======")
 			self.save_current_model()
 			del self.dataset
 			self.dataset = deque(), deque(), deque()
@@ -98,9 +101,9 @@ class OptimizeWorker:
 		"""
 		Compiles the model to use optimizer and loss function tuned for supervised learning
 		"""
-		opt = Adam()
+		opt = Adam(lr=0.001)
 		losses = ['categorical_crossentropy', 'mean_squared_error']  # avoid overfit for supervised
-		self.model.model.compile(optimizer=opt, loss=losses, loss_weights=self.config.trainer.loss_weights)
+		self.model.model.compile(optimizer=opt, loss=losses)
 
 	def save_current_model(self):
 		"""
@@ -151,7 +154,7 @@ class OptimizeWorker:
 		value_ary1 = np.asarray(value_ary, dtype=np.float32)
 		return state_ary1, policy_ary1, value_ary1
 
-	def load_model(self):
+	def load_model(self, continue_training: bool):
 		"""
 		Loads the next generation model from the appropriate directory. If not found, loads
 		the best known model.
@@ -160,7 +163,7 @@ class OptimizeWorker:
 		rc = self.config.resource
 
 		dirs = get_next_generation_model_dirs(rc)
-		if not dirs or len(dirs) == 0:
+		if not dirs or len(dirs) == 0 and continue_training:
 			logger.debug("loading best model")
 			if not load_best_model_weight(model):
 				raise RuntimeError("Best model can not loaded!")
@@ -169,7 +172,7 @@ class OptimizeWorker:
 			logger.debug("loading latest model")
 			config_path = os.path.join(latest_dir, rc.next_generation_model_config_filename)
 			weight_path = os.path.join(latest_dir, rc.next_generation_model_weight_filename)
-			model.load(config_path, weight_path)
+			model.load(config_path, weight_path, continue_training)
 		return model
 
 

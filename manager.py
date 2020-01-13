@@ -35,7 +35,7 @@ def start(args: dict):
 		return self_play.start(config)
 	elif args["cmd"] == 'opt':
 		from worker import optimize
-		return optimize.start(config)
+		return optimize.start(config, args["continue_training"])
 	elif args["cmd"] == 'eval':
 		from worker import evaluate
 		return evaluate.start(config)

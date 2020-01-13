@@ -45,17 +45,16 @@ class PlayConfig:
 class TrainerConfig:
 	def __init__(self):
 		self.cleaning_processes = 5  # RAM explosion...
-		self.batch_size = 256  # tune this to your gpu memory
+		self.batch_size = 512  # tune this to your gpu memory
 		self.epoch_to_checkpoint = 1
 		self.dataset_size = 100_000
-		self.loss_weights = [1.25, 1.0]  # [policy, value] prevent value overfit in SL
 
 
 class ModelConfig:
 	cnn_filter_num = 256
 	cnn_first_filter_size = 5
 	cnn_filter_size = 3
-	res_layer_num = 10
-	l2_reg = 1e-4
+	res_layer_num = 20
+	l2_reg = 0
 	value_fc_size = 256
 	input_depth = 18
