@@ -1,3 +1,6 @@
+"""
+Supervised Learning on generated training data.
+"""
 import multiprocessing as mp
 import os
 import sys

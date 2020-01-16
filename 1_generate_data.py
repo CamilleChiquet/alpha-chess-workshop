@@ -1,3 +1,6 @@
+"""
+Generates training data from .pgn files in data/play_data/ for the supervised learning phase.
+"""
 import multiprocessing as mp
 import os
 import sys

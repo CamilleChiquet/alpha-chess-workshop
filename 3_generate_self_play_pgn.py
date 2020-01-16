@@ -1,3 +1,9 @@
+"""
+Make the network play against itself and records the games inside a self_play.pgn file.
+
+The "data/model/model_best_weight.h5" model will be loaded. Make sure it is the one you want to use.
+If it doesn't exist, a model with random weights and biases will be used to play.
+"""
 import multiprocessing as mp
 import os
 import sys
@@ -12,7 +18,5 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
-	# The "data/model/model_best_weight.h5" model will be loaded. Make sure it is the one you want to use.
-	# If it doesn't exist, a model with random weights and biases will be used to play.
 	args = {"type": "normal", "cmd": "self"}
 	manager.start(args)
