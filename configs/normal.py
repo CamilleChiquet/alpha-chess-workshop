@@ -45,7 +45,7 @@ class PlayConfig:
 class TrainerConfig:
 	def __init__(self):
 		self.cleaning_processes = 5  # RAM explosion...
-		self.batch_size = 512  # tune this to your gpu memory
+		self.batch_size = 128  # tune this to your gpu memory
 		self.epoch_to_checkpoint = 1
 		self.dataset_size = 100_000
 
@@ -54,6 +54,6 @@ class ModelConfig:
 	cnn_filter_num = 256
 	cnn_first_filter_size = 5
 	cnn_filter_size = 3
-	res_layer_num = 20
+	res_layer_num = 40
 	value_fc_size = 256
 	input_depth = 18
