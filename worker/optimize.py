@@ -85,16 +85,18 @@ class OptimizeWorker:
 		Runs some number of epochs of training
 		:param int epochs: number of epochs
 		:return: number of datapoints that were trained on in total
+
+		If you have downloaded all games from 2000 to 2020 with a average elo > 2000 from this site :
+		https://www.ficsgames.org/download.html
+		Then you have so much data (~1 000 000 games) that you can let validation_split to 0 (default value).
 		"""
 		tc = self.config.trainer
 		state_ary, policy_ary, value_ary = self.collect_all_loaded_data()
-		# tensorboard_cb = TensorBoard(log_dir="./logs", batch_size=tc.batch_size, histogram_freq=1)
 		self.model.model.fit(state_ary, [policy_ary, value_ary],
 		                     batch_size=tc.batch_size,
 		                     epochs=epochs,
 		                     shuffle=True,
-		                     validation_split=0.02,
-		                     # callbacks=[tensorboard_cb],
+		                     # validation_split=0.05
 		                     verbose=2)
 
 	def compile_model(self):
@@ -201,6 +203,8 @@ def convert_to_cheating_data(fen_data: list, moves_data: np.ndarray, scores_data
 			if is_black_turn(state_fen):
 				policy = Config.flip_policy(policy)
 
+			# TODO : essayer de pondérer sl_value par la position du move dans la partie (petite pondération pour les
+			#  premiers et grande pour les derniers, 1 pour le dernier déplacement)
 			move_number = int(state_fen.split(' ')[5])
 			value_certainty = min(5, move_number) / 5  # reduces the noise of the opening... plz train faster
 			sl_value = value * value_certainty + testeval(state_fen, False) * (1 - value_certainty)

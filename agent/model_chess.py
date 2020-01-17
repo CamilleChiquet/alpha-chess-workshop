@@ -13,12 +13,9 @@ from keras.layers.convolutional import Conv2D
 from keras.layers.core import Activation, Dense, Flatten
 from keras.layers.merge import Add
 from keras.layers.normalization import BatchNormalization
-from keras.regularizers import l2
 
 from agent.api_chess import ChessModelAPI
 from config import Config
-
-# noinspection PyPep8Naming
 
 logger = getLogger(__name__)
 
@@ -57,16 +54,16 @@ class ChessModel:
 	def build(self):
 		"""
 		Builds the full Keras model and stores it in self.model.
+		Why biases are set to False : https://github.com/kuangliu/pytorch-cifar/issues/52
 		"""
 		mc = self.config.model
 		in_x = x = Input((18, 8, 8))
 
 		# (batch, channels, height, width)
 		x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_first_filter_size, padding="same",
-		           data_format="channels_first", use_bias=False, kernel_regularizer=l2(mc.l2_reg),
+		           data_format="channels_first", use_bias=False,
 		           name="input_conv-" + str(mc.cnn_first_filter_size) + "-" + str(mc.cnn_filter_num))(x)
-		x = BatchNormalization(axis=-1,
-		                       name="input_batchnorm")(x)
+		x = BatchNormalization(axis=1, name="input_batchnorm")(x)
 		x = Activation("relu", name="input_relu")(x)
 
 		for i in range(mc.res_layer_num):
@@ -76,24 +73,21 @@ class ChessModel:
 
 		# for policy output
 		x = Conv2D(filters=2, kernel_size=1, data_format="channels_first", use_bias=False,
-		           kernel_regularizer=l2(mc.l2_reg),
 		           name="policy_conv-1-2")(res_out)
-		x = BatchNormalization(axis=-1, name="policy_batchnorm")(x)
+		x = BatchNormalization(axis=1, name="policy_batchnorm")(x)
 		x = Activation("relu", name="policy_relu")(x)
 		x = Flatten(name="policy_flatten")(x)
 		# no output for 'pass'
-		policy_out = Dense(self.config.n_labels, kernel_regularizer=l2(mc.l2_reg), activation="softmax",
-		                   name="policy_out")(x)
+		policy_out = Dense(self.config.n_labels, activation="softmax", name="policy_out")(x)
 
 		# for value output
 		x = Conv2D(filters=4, kernel_size=1, data_format="channels_first", use_bias=False,
-		           kernel_regularizer=l2(mc.l2_reg),
 		           name="value_conv-1-4")(res_out)
-		x = BatchNormalization(axis=-1, name="value_batchnorm")(x)
+		x = BatchNormalization(axis=1, name="value_batchnorm")(x)
 		x = Activation("relu", name="value_relu")(x)
 		x = Flatten(name="value_flatten")(x)
-		x = Dense(mc.value_fc_size, kernel_regularizer=l2(mc.l2_reg), activation="relu", name="value_dense")(x)
-		value_out = Dense(1, kernel_regularizer=l2(mc.l2_reg), activation="tanh", name="value_out")(x)
+		x = Dense(mc.value_fc_size, activation="relu", name="value_dense")(x)
+		value_out = Dense(1, activation="tanh", name="value_out")(x)
 
 		self.model = Model(in_x, [policy_out, value_out], name="chess_model")
 
@@ -102,14 +96,14 @@ class ChessModel:
 		in_x = x
 		res_name = "res" + str(index)
 		x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_filter_size, padding="same",
-		           data_format="channels_first", use_bias=False, kernel_regularizer=l2(mc.l2_reg),
+		           data_format="channels_first", use_bias=False,
 		           name=res_name + "_conv1-" + str(mc.cnn_filter_size) + "-" + str(mc.cnn_filter_num))(x)
-		x = BatchNormalization(axis=-1, name=res_name + "_batchnorm1")(x)
+		x = BatchNormalization(axis=1, name=res_name + "_batchnorm1")(x)
 		x = Activation("relu", name=res_name + "_relu1")(x)
 		x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_filter_size, padding="same",
-		           data_format="channels_first", use_bias=False, kernel_regularizer=l2(mc.l2_reg),
+		           data_format="channels_first", use_bias=False,
 		           name=res_name + "_conv2-" + str(mc.cnn_filter_size) + "-" + str(mc.cnn_filter_num))(x)
-		x = BatchNormalization(axis=-1, name="res" + str(index) + "_batchnorm2")(x)
+		x = BatchNormalization(axis=1, name="res" + str(index) + "_batchnorm2")(x)
 		x = Add(name=res_name + "_add")([in_x, x])
 		x = Activation("relu", name=res_name + "_relu2")(x)
 		return x
@@ -141,7 +135,10 @@ class ChessModel:
 			logger.debug(f"loaded model digest = {self.digest}")
 			return True
 		else:
-			logger.debug(f"model files does not exist at {config_path} and {weight_path}")
+			if not continue_training:
+				logger.debug(f"model files does not exist at {config_path} and {weight_path}")
+			else:
+				logger.debug(f"A new model will be created.")
 			self.build()
 			return True
 

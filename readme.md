@@ -4,6 +4,7 @@
 
 - [AlphaZero Cheat Sheet](https://miro.medium.com/max/2000/1*0pn33bETjYOimWjlqDLLNw.png)
 - [Lessons from implementing AlphaZero](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191)
+- [Real player games .pgn files](https://www.ficsgames.org/download.html) (you can select whole year datasets and average elo score > 2000)
 - [Online .pgn viewer](https://chesstempo.com/pgn-viewer.html)
 
 # How to play against AI

@@ -6,7 +6,6 @@ import re
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from logging import getLogger
-from time import time
 
 import chess.pgn
 import numpy as np
@@ -60,8 +59,7 @@ class SupervisedLearningWorker:
 			for filename in files:
 				games = get_games_from_file(filename)
 				print("done reading")
-				for res in as_completed([executor.submit(get_buffer, self.config, game) for game in
-				                         games]):  # poisoned reference (memleak)
+				for res in as_completed([executor.submit(get_buffer, self.config, game) for game in games]):
 					self.idx += 1
 					env, fen_data, moves_array, scores_array = res.result()
 					self.save_data(fen_data, moves_array, scores_array)
@@ -125,10 +123,9 @@ def get_games_from_file(filename):
 
 
 def clip_elo_policy(config, elo):
-	return min(1, max(0, elo - config.play_data.min_elo_policy) / config.play_data.max_elo_policy)
-
-
-# 0 until min_elo, 1 after max_elo, linear in between
+	# 0 until min_elo, 1 after max_elo, linear in between
+	return min(1, max(0, elo - config.play_data.min_elo_policy) / (
+				config.play_data.max_elo_policy - config.play_data.min_elo_policy))
 
 
 def get_buffer(config, game) -> (ChessEnv, list):
@@ -145,7 +142,6 @@ def get_buffer(config, game) -> (ChessEnv, list):
 	white_elo, black_elo = int(game.headers["WhiteElo"]), int(game.headers["BlackElo"])
 	white_weight = clip_elo_policy(config, white_elo)
 	black_weight = clip_elo_policy(config, black_elo)
-	# TODO : try with weights of 1, whatever the elo rank is
 
 	actions = []
 	while not game.is_end():
