@@ -1,1 +1,1 @@
-python 4_run_uci.py
+python run_uci.py

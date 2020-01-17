@@ -1,5 +1,7 @@
 """
-Supervised Learning on generated training data.
+Reinforcement Learning phase.
+
+Put your best model in "data/model/" and name it model_best_weight.h5.
 """
 import multiprocessing as mp
 import os
@@ -15,5 +17,5 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
-	args = {"type": "normal", "cmd": "opt", "continue_training": False}
+	args = {"type": "normal", "cmd": "self"}
 	manager.start(args)
