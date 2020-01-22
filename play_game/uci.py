@@ -66,8 +66,3 @@ def get_player(config):
 	if not load_best_model_weight(model):
 		raise RuntimeError("Best model not found!")
 	return ChessPlayer(config, model.get_pipes(config.play.search_threads))
-
-
-def info(depth, move, score):
-	print(f"info score cp {int(score * 100)} depth {depth} pv {move}")
-	sys.stdout.flush()

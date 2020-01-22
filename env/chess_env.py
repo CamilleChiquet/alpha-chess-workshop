@@ -127,10 +127,6 @@ class ChessEnv:
 			self.winner = Winner.black
 			self.result = "0-1"
 
-	def ending_average_game(self):
-		self.winner = Winner.draw
-		self.result = "1/2-1/2"
-
 	def copy(self):
 		env = copy.copy(self)
 		env.board = copy.copy(self.board)
@@ -144,19 +140,6 @@ class ChessEnv:
 	@property
 	def observation(self):
 		return self.board.fen()
-
-	def deltamove(self, fen_next):
-		moves = list(self.board.legal_moves)
-		for mov in moves:
-			self.board.push(mov)
-			fee = self.board.fen()
-			self.board.pop()
-			if fee == fen_next:
-				return mov.uci()
-		return None
-
-	def replace_tags(self):
-		return replace_tags_board(self.board.fen())
 
 	def canonical_input_planes(self):
 		"""
@@ -190,45 +173,6 @@ def testeval(fen, absolute=False) -> float:
 	assert abs(v) < 1
 	# TODO : to change
 	return np.tanh(v * 3)  # arbitrary
-
-
-def check_current_planes(realfen, planes):
-	cur = planes[0:12]
-	assert cur.shape == (12, 8, 8)
-	fakefen = ["1"] * 64
-	for i in range(12):
-		for rank in range(8):
-			for file in range(8):
-				if cur[i][rank][file] == 1:
-					assert fakefen[rank * 8 + file] == '1'
-					fakefen[rank * 8 + file] = pieces_order[i]
-
-	castling = planes[12:16]
-	fiftymove = planes[16][0][0]
-	ep = planes[17]
-
-	castlingstring = ""
-	for i in range(4):
-		if castling[i][0][0] == 1:
-			castlingstring += castling_order[i]
-
-	if len(castlingstring) == 0:
-		castlingstring = '-'
-
-	epstr = "-"
-	for rank in range(8):
-		for file in range(8):
-			if ep[rank][file] == 1:
-				epstr = coord_to_alg((rank, file))
-
-	realfen = maybe_flip_fen(realfen, flip=is_black_turn(realfen))
-	realparts = realfen.split(' ')
-	assert realparts[1] == 'w'
-	assert realparts[2] == castlingstring
-	assert realparts[3] == epstr
-	assert int(realparts[4]) == fiftymove
-	# realparts[5] is the fifty-move clock, discard that
-	return "".join(fakefen) == replace_tags_board(realfen)
 
 
 def canon_input_planes(fen):
