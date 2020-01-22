@@ -1,5 +1,5 @@
 """
-Script used by the C0uci.bat when called by a software like Arena.
+Script used by the AlphaZero.bat when called by a software like Arena.
 Read the readme.md to learn how to play against the AI with a GUI (Graphical User Interface).
 """
 import multiprocessing as mp

@@ -12,8 +12,8 @@
 - Put your best model in **data/model/** and name it **model_best_weight.h5**.
 - Download and extract [Arena Chess GUI](http://www.playwitharena.de/) (no installation needed).
 - Start Arena software. From the GUI :
-  - Select **Engines** => **Install New Engine** => *select your C0uci.bat (or C0uci.sh for linux) file* and validate
-  - Select **Engines** => **Load Engine** => Select the *C0uci* file => Clic **Load** => Clic **OK**
+  - Select **Engines** => **Install New Engine** => *select your AlphaZero.bat (or AlphaZero.sh for linux) file* and validate
+  - Select **Engines** => **Load Engine** => Select the *AlphaZero.bat* file => Clic **Load** => Clic **OK**
 
 You can now play on the Arena GUI against your AI. You will probably be the white player so you have to play first.
 Then the AI will compute its best move (it can take some time depending of what *simulation_num_per_move* you set
