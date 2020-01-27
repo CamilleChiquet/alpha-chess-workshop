@@ -1,7 +1,6 @@
-tensorflow-gpu
-keras
-profilehooks
-numpy
-pyperclip
-python-chess
-h5py
+tensorflow-gpu=1.14
+keras=2.2.5
+profilehooks=1.11.0
+numpy=1.16.5
+python-chess=0.30.0
+h5py=2.9.0
