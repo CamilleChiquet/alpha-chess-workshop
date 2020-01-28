@@ -11,11 +11,9 @@ import numpy as np
 
 logger = getLogger(__name__)
 
-# noinspection PyArgumentList
 Winner = enum.Enum("Winner", "black white draw")
 
 # input planes
-# noinspection SpellCheckingInspection
 pieces_order = 'KQRBNPkqrbnp'  # 12x8x8
 castling_order = 'KQkq'  # 4x8x8
 # fifty-move-rule             # 1x8x8

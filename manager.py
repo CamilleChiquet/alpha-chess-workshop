@@ -39,5 +39,8 @@ def start(worker: str, config_type: str = "normal", continue_training: bool = Fa
 	elif worker == 'uci':
 		from play_game import uci
 		return uci.start(config)
+	elif worker == 'duel':
+		from worker import duel
+		return duel.start(config, model_1_path=model_1_path, model_2_path=model_2_path, deterministic=deterministic)
 	else:
 		raise ValueError(f"{worker}")

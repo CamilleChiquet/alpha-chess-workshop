@@ -1,5 +1,5 @@
 """
-Make the network play against itself and records the games inside a self_play.pgn file.
+Make the network play against itself and records the games inside a game.pgn file.
 
 The "data/model/model_best_weight.h5" model will be loaded. Make sure it is the one you want to use.
 If it doesn't exist, a model with random weights and biases will be used to play.
@@ -18,5 +18,6 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
-	args = {"type": "normal", "cmd": "self"}
-	manager.start(args)
+	# model_1 is white, model_2 plays as black player
+	manager.start(worker="duel", config_type="normal", model_1_path="data/model/new", model_2_path="data/model/old",
+	              deterministic=True)
