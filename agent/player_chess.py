@@ -70,7 +70,7 @@ class ChessPlayer:
 		:ivar int labels_n: length of self.labels.
 		:ivar list(str) labels: all of the possible move labels (like a1b1, a1c1, etc...)
 		:ivar dict(str,int) move_lookup: dict from move label to its index in self.labels
-		:ivar list(Connection) pipe_pool: the pipes to send the observations of the game to to get back
+		:ivar list(Connection) pipe_pool: the pipes to send the observations of the game to get back
 			value and policy predictions from
 		:ivar dict(str,Lock) node_lock: dict from FEN game state to a Lock, indicating
 			whether that state is currently being explored by another thread.
@@ -100,25 +100,6 @@ class ChessPlayer:
 		"""
 		self.tree = defaultdict(VisitStats)
 
-	def deboog(self, env):
-		print(env.testeval())
-
-		state = state_key(env)
-		my_visit_stats = self.tree[state]
-		stats = []
-		for action, a_s in my_visit_stats.a.items():
-			moi = self.move_lookup[action]
-			stats.append(np.asarray([a_s.n, a_s.w, a_s.q, a_s.p, moi]))
-		stats = np.asarray(stats)
-		a = stats[stats[:, 0].argsort()[::-1]]
-
-		for s in a:
-			print(f'{self.labels[int(s[4])]:5}: '
-			      f'n: {s[0]:3.0f} '
-			      f'w: {s[1]:7.3f} '
-			      f'q: {s[2]:7.3f} '
-			      f'p: {s[3]:7.5f}')
-
 	def action(self, env, can_stop=True) -> str:
 		"""
 		Figures out the next best move
@@ -139,7 +120,6 @@ class ChessPlayer:
 		if can_stop and self.play_config.resign_threshold is not None and \
 				root_value <= self.play_config.resign_threshold \
 				and env.num_halfmoves > self.play_config.min_resign_turn:
-			# noinspection PyTypeChecker
 			return None
 		else:
 			self.moves.append([env.observation, policy])
