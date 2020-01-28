@@ -16,5 +16,4 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
-	args = {"type": "normal", "cmd": "uci"}
-	manager.start(args)
+	manager.start(worker="uci", config_type="normal")
