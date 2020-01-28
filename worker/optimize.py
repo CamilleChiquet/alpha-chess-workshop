@@ -9,7 +9,7 @@ from logging import getLogger
 from random import shuffle
 
 import numpy as np
-from keras.callbacks import TensorBoard
+import tensorflow as tf
 from keras.optimizers import Adam
 
 from agent.model_chess import ChessModel
@@ -21,12 +21,12 @@ from lib.model_helper import load_best_model_weight
 logger = getLogger(__name__)
 
 
-def start(config: Config, continue_training: bool = False):
+def start(config: Config):
 	"""
 	Helper method which just kicks off the optimization using the specified config
 	:param Config config: config to use
 	"""
-	return OptimizeWorker(config).start(continue_training)
+	return OptimizeWorker(config).start()
 
 
 class OptimizeWorker:
@@ -48,29 +48,41 @@ class OptimizeWorker:
 		self.model = None  # type: ChessModel
 		self.dataset = deque(), deque(), deque()
 		self.executor = ProcessPoolExecutor(max_workers=config.trainer.cleaning_processes)
+		self.lr = self.config.trainer.start_lr
 
-	def start(self, continue_training: bool = False):
+	def start(self):
 		"""
 		Load the next generation model from disk and start doing the training endlessly.
 		"""
-		self.model = self.load_model(continue_training)
+		self.model = self.load_model(self.config.trainer.continue_training)
 		self.training()
 
 	def training(self):
 		"""
 		Does the actual training of the model, running it on game data. Endless.
 		"""
-		self.compile_model()
+		if self.config.trainer.tensorboard_enabled:
+			self.file_writer = tf.summary.FileWriter(self.config.resource.log_dir + "/" +
+		                                         datetime.now().strftime("%Y%m%d-%H%M%S"), tf.Session().graph)
+
+		self.compile_model(lr=self.lr)
+
 		self.filenames = deque(get_game_data_filenames(self.config.resource))
 		shuffle(self.filenames)
+
 		all_data_seen_nb_times = 0
 
-		epochs = 0
+		self.epochs = 0
+		self.steps_since_last_loss_improvment = 0
+		self.last_best_loss = np.inf
+
 		while True:
 			self.fill_queue()
-			self.train_epoch(self.config.trainer.epoch_to_checkpoint)
-			epochs += self.config.trainer.epoch_to_checkpoint
-			print(f"======= Epoch : {epochs} =======")
+			history = self.train_epoch()
+			self.tensorboard_logs(history)
+			self.update_learning_rate(history)
+			self.epochs += 1
+			print(f"======= Step : {self.epochs} =======")
 			self.save_current_model()
 			del self.dataset
 			self.dataset = deque(), deque(), deque()
@@ -80,7 +92,46 @@ class OptimizeWorker:
 				shuffle(self.filenames)
 				logger.debug(f"!!! All dataset as been seen {all_data_seen_nb_times} time(s) !!!")
 
-	def train_epoch(self, epochs):
+	def update_learning_rate(self, history):
+		loss = history.history["loss"][0]
+
+		if loss < self.last_best_loss:
+			self.last_best_loss = loss
+			self.steps_since_last_loss_improvment = 0
+		else:
+			self.steps_since_last_loss_improvment += 1
+			if self.steps_since_last_loss_improvment > self.config.trainer.loss_patience:
+				self.steps_since_last_loss_improvment = 0
+				self.last_best_loss = loss
+				self.lr /= 2.0
+				if self.lr < self.config.trainer.min_lr:
+					self.lr = self.config.trainer.min_lr
+				self.compile_model(lr=self.lr)
+
+	def tensorboard_logs(self, history):
+		"""
+		If tensorboard logs are enabled in the conf (tensorboard_enabled=True), then it will log the loss, policy loss,
+		value loss and learning rate evolution across epochs.
+		These logs can be viewed on a tensorboard UI by entering the following command in a terminal :
+		"tensorboard --logdir=[replace by your logs directory]"
+		"""
+		if self.config.trainer.tensorboard_enabled:
+			loss = history.history["loss"][0]
+			summary = tf.Summary(value=[tf.Summary.Value(tag='loss', simple_value=loss)])
+			self.file_writer.add_summary(summary, self.epochs)
+
+			policy_out_loss = history.history["policy_out_loss"][0]
+			summary = tf.Summary(value=[tf.Summary.Value(tag='policy_out_loss', simple_value=policy_out_loss)])
+			self.file_writer.add_summary(summary, self.epochs)
+
+			value_out_loss = history.history["value_out_loss"][0]
+			summary = tf.Summary(value=[tf.Summary.Value(tag='value_out_loss', simple_value=value_out_loss)])
+			self.file_writer.add_summary(summary, self.epochs)
+
+			summary = tf.Summary(value=[tf.Summary.Value(tag='lr', simple_value=self.lr)])
+			self.file_writer.add_summary(summary, self.epochs)
+
+	def train_epoch(self):
 		"""
 		Runs some number of epochs of training
 		:param int epochs: number of epochs
@@ -92,18 +143,18 @@ class OptimizeWorker:
 		"""
 		tc = self.config.trainer
 		state_ary, policy_ary, value_ary = self.collect_all_loaded_data()
-		self.model.model.fit(state_ary, [policy_ary, value_ary],
-		                     batch_size=tc.batch_size,
-		                     epochs=epochs,
-		                     shuffle=True,
-		                     # validation_split=0.05
-		                     verbose=2)
+		return self.model.model.fit(x=state_ary, y=[policy_ary, value_ary],
+		                            batch_size=tc.batch_size,
+		                            epochs=1,
+		                            shuffle=True,
+		                            # validation_split=0.05
+		                            verbose=2)
 
-	def compile_model(self):
+	def compile_model(self, lr: float = 0.001):
 		"""
 		Compiles the model to use optimizer and loss function tuned for supervised learning
 		"""
-		opt = Adam(lr=0.0001)
+		opt = Adam(lr=lr)
 		losses = ['categorical_crossentropy', 'mean_squared_error']
 		self.model.model.compile(optimizer=opt, loss=losses)
 
@@ -178,17 +229,13 @@ class OptimizeWorker:
 		return model
 
 
-def load_data_from_file(filename):
+def load_data_from_file(filename: str):
 	return convert_to_cheating_data(fen_data=read_pickle_object(filename + "_fen.pickle"),
 	                                moves_data=np.load(filename + "_moves.npy", allow_pickle=True),
 	                                scores_data=np.load(filename + "_scores.npy", allow_pickle=True))
 
 
 def convert_to_cheating_data(fen_data: list, moves_data: np.ndarray, scores_data: np.ndarray):
-	"""
-	:param data: format is SelfPlayWorker.buffer
-	:return:
-	"""
 	state_list = []
 	policy_list = []
 	value_list = []
@@ -213,5 +260,5 @@ def convert_to_cheating_data(fen_data: list, moves_data: np.ndarray, scores_data
 			policy_list.append(policy)
 			value_list.append(sl_value)
 
-	return np.asarray(state_list, dtype=np.float32), np.asarray(policy_list, dtype=np.float32),\
+	return np.asarray(state_list, dtype=np.float32), np.asarray(policy_list, dtype=np.float32), \
 	       np.asarray(value_list, dtype=np.float32)

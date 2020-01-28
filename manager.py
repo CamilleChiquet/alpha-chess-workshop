@@ -10,7 +10,7 @@ from lib.logger import setup_logger
 logger = getLogger(__name__)
 
 
-def start(worker: str, config_type: str = "normal", continue_training: bool = False, model_1_path: str = None,
+def start(worker: str, config_type: str = "normal", model_1_path: str = None,
           model_2_path: str = None, deterministic: bool = False):
 	"""
 	Starts one of the processes based on given arguments.
@@ -29,7 +29,7 @@ def start(worker: str, config_type: str = "normal", continue_training: bool = Fa
 
 	if worker == 'opt':
 		from worker import optimize
-		return optimize.start(config, continue_training)
+		return optimize.start(config)
 	elif worker == 'eval':
 		from worker import evaluate
 		return evaluate.start(config)

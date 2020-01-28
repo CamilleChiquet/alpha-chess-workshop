@@ -24,5 +24,4 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
-	# You can continue training by setting "continue_training" to True
-	manager.start(worker="opt", config_type="normal", continue_training=False)
+	manager.start(worker="opt", config_type="normal")

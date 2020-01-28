@@ -29,7 +29,7 @@ class PlayConfig:
 	def __init__(self):
 		self.max_processes = 3
 		self.search_threads = 16
-		self.simulation_num_per_move = 1600
+		self.simulation_num_per_move = 800
 		self.thinking_loop = 1
 		self.logging_thinking = False
 		self.c_puct = 1.5
@@ -44,10 +44,26 @@ class PlayConfig:
 
 class TrainerConfig:
 	def __init__(self):
-		self.cleaning_processes = 5  # RAM explosion...
+		self.cleaning_processes = 6  # RAM explosion...
+
 		self.batch_size = 128  # tune this to your gpu memory
-		self.epoch_to_checkpoint = 1
+
 		self.dataset_size = 100_000
+
+		# Learning rate paramters
+		self.start_lr = 0.005
+		self.min_lr = 1e-7
+		# If there is no improvement in the X last iteration(s), then the learning rate is lowered
+		self.loss_patience = 5
+
+		# When training has started, enter the following command in a terminal
+		# > tensorboard --logdir=[replace by your logs directory]
+		self.tensorboard_enabled = True
+
+		# Set it to True if you want to continue a previously stopped training.
+		# It will take the latest saved model in the "data/model/next_generation" directory and continue the
+		# training from this point.
+		self.continue_training = False
 
 
 class ModelConfig:
