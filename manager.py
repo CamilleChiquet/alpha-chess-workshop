@@ -2,7 +2,6 @@
 Manages starting off each of the separate processes involved in ChessZero -
 self play, training, and evaluation.
 """
-import argparse
 from logging import getLogger, disable
 
 from config import Config
@@ -10,18 +9,16 @@ from lib.logger import setup_logger
 
 logger = getLogger(__name__)
 
-CMD_LIST = ['self', 'opt', 'eval', 'sl', 'uci']
 
-
-def start(args: dict):
+def start(worker: str, config_type: str = "normal", continue_training: bool = False, model_1_path: str = None,
+          model_2_path: str = None, deterministic: bool = False):
 	"""
-	Starts one of the processes based on command line arguments.
+	Starts one of the processes based on given arguments.
 
 	:return : the worker class that was started
 	"""
-	config_type = args["type"]
 
-	if args['cmd'] == 'uci':
+	if worker == 'uci':
 		disable(999999)  # plz don't interfere with uci
 
 	config = Config(config_type=config_type)
@@ -30,20 +27,17 @@ def start(args: dict):
 
 	logger.info(f"config type: {config_type}")
 
-	if args["cmd"] == 'self':
-		from worker import self_play
-		return self_play.start(config)
-	elif args["cmd"] == 'opt':
+	if worker == 'opt':
 		from worker import optimize
-		return optimize.start(config, args["continue_training"])
-	elif args["cmd"] == 'eval':
+		return optimize.start(config, continue_training)
+	elif worker == 'eval':
 		from worker import evaluate
 		return evaluate.start(config)
-	elif args["cmd"] == 'sl':
+	elif worker == 'sl':
 		from worker import sl
 		return sl.start(config)
-	elif args["cmd"] == 'uci':
+	elif worker == 'uci':
 		from play_game import uci
 		return uci.start(config)
 	else:
-		raise ValueError(f"{args['cmd']}")
+		raise ValueError(f"{worker}")

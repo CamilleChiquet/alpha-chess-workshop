@@ -25,5 +25,4 @@ if __name__ == "__main__":
 	import manager
 
 	# You can continue training by setting "continue_training" to True
-	args = {"type": "normal", "cmd": "opt", "continue_training": False}
-	manager.start(args)
+	manager.start(worker="opt", config_type="normal", continue_training=False)

@@ -1,5 +1,6 @@
 """
 Generates training data from .pgn files in data/play_data/ for the supervised learning phase.
+To download pgn files of real players games, go to : https://www.ficsgames.org/download.html
 """
 import multiprocessing as mp
 import os
@@ -15,5 +16,4 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
-	args = {"type": "normal", "cmd": "sl"}
-	manager.start(args)
+	manager.start(worker="sl", config_type="normal")
