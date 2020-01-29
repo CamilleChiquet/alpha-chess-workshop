@@ -38,13 +38,13 @@ class DuelWorker:
 
 	def __init__(self, config: Config, model_1_path: str, model_2_path: str, deterministic: bool = False):
 		self.config = config
-		self.config.simulation_num_per_move = 1600
-		self.config.noise_eps = 0
+		self.config.play.simulation_num_per_move = 800
+		self.config.play.noise_eps = 0
 
 		if deterministic:
-			self.config.c_puct = 1 # lower  = prefer mean action value
-			self.config.tau_decay_rate = 0  # start deterministic mode
-			self.config.resign_threshold = None
+			self.config.play.c_puct = 1 # lower  = prefer mean action value
+			self.config.play.tau_decay_rate = 0  # start deterministic mode
+			self.config.play.resign_threshold = None
 
 		self.current_model_1 = self.load_model(model_1_path)
 		self.current_model_2 = self.load_model(model_2_path)
@@ -105,6 +105,7 @@ def play_buffer(config, cur) -> (ChessEnv, list):
 			action = white.action(env)
 		else:
 			action = black.action(env)
+		print(action)
 		env.step(action)
 		if env.num_halfmoves >= config.play.max_game_length:
 			env.adjudicate()
