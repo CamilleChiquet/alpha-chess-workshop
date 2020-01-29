@@ -105,7 +105,6 @@ def play_buffer(config, cur) -> (ChessEnv, list):
 			action = white.action(env)
 		else:
 			action = black.action(env)
-		print(action)
 		env.step(action)
 		if env.num_halfmoves >= config.play.max_game_length:
 			env.adjudicate()
