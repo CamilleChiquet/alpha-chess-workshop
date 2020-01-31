@@ -46,15 +46,15 @@ class TrainerConfig:
 	def __init__(self):
 		self.cleaning_processes = 6  # RAM explosion...
 
-		self.batch_size = 128  # tune this to your gpu memory
+		self.batch_size = 512  # tune this to your gpu memory
 
 		self.dataset_size = 100_000
 
 		# Learning rate paramters
 		self.start_lr = 0.005
-		self.min_lr = 1e-7
+		self.min_lr = 1e-6
 		# If there is no improvement in the X last iteration(s), then the learning rate is lowered
-		self.loss_patience = 5
+		self.loss_patience = 8
 
 		# When training has started, enter the following command in a terminal
 		# > tensorboard --logdir=[replace by your logs directory]
