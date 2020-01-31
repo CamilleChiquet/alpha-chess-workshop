@@ -78,7 +78,6 @@ class ChessPlayer:
 			during the running of the AGZ algorithm
 	"""
 
-	# dot = False
 	def __init__(self, config: Config, pipes=None, play_config=None, dummy=False):
 		self.moves = []
 
@@ -127,9 +126,8 @@ class ChessPlayer:
 
 	def search_moves(self, env) -> (float, float):
 		"""
-		Looks at all the possible moves using the AGZ MCTS algorithm
-		 and finds the highest value possible move. Does so using multiple threads to get multiple
-		 estimates from the AGZ MCTS algorithm so we can pick the best.
+		Looks at all the possible moves using the AGZ MCTS algorithm and finds the highest value possible move.
+		Does so using multiple threads to get multiple estimates from the AGZ MCTS algorithm so we can pick the best.
 
 		:param ChessEnv env: env to search for moves within
 		:return (float,float): the maximum value of all values predicted by each thread,
@@ -154,8 +152,7 @@ class ChessPlayer:
 
 		:param ChessEnv env: environment in which to search for the move
 		:param boolean is_root_node: whether this is the root node of the search.
-		:return float: value of the move. This is calculated by getting a prediction
-			from the value network.
+		:return float: value of the move. This is calculated by getting a prediction from the value network.
 		"""
 		if env.done:
 			if env.winner == Winner.draw:
@@ -200,8 +197,8 @@ class ChessPlayer:
 		return leaf_v
 
 	def expand_and_evaluate(self, env) -> (np.ndarray, float):
-		""" expand new leaf, this is called only once per state
-		this is called with state locked
+		"""
+		Expand new leaf, this is called only once per state
 		insert P(a|s), return leaf_v
 
 		This gets a prediction for the policy and value of the state within the given env
@@ -230,7 +227,6 @@ class ChessPlayer:
 		self.pipe_pool.append(pipe)
 		return ret
 
-	# @profile
 	def select_action_q_and_u(self, env, is_root_node) -> chess.Move:
 		"""
 		Picks the next action to explore using the AGZ MCTS algorithm.
@@ -242,7 +238,6 @@ class ChessPlayer:
 		:param is_root_node: whether this is for the root node of the MCTS search.
 		:return chess.Move: the move to explore
 		"""
-		# this method is called with state locked
 		state = state_key(env)
 
 		my_visitstats = self.tree[state]
@@ -253,8 +248,8 @@ class ChessPlayer:
 				mov_p = my_visitstats.p[self.move_lookup[mov]]
 				my_visitstats.a[mov].p = mov_p
 				tot_p += mov_p
-			for a_s in my_visitstats.a.values():
-				a_s.p /= tot_p
+			for action_stat in my_visitstats.a.values():
+				action_stat.p /= tot_p
 			my_visitstats.p = None
 
 		xx_ = np.sqrt(my_visitstats.sum_n + 1)  # sqrt of sum(N(s, b); for all b)
@@ -263,31 +258,31 @@ class ChessPlayer:
 		c_puct = self.play_config.c_puct
 		dir_alpha = self.play_config.dirichlet_alpha
 
-		best_s = -999
-		best_a = None
+		best_score = -np.inf
+		best_action = None
+
 		if is_root_node:
 			noise = np.random.dirichlet([dir_alpha] * len(my_visitstats.a))
 
 		i = 0
-		for action, a_s in my_visitstats.a.items():
-			p_ = a_s.p
+		for action, action_stat in my_visitstats.a.items():
+			p_ = action_stat.p
 			if is_root_node:
 				p_ = (1 - e) * p_ + e * noise[i]
 				i += 1
-			b = a_s.q + c_puct * p_ * xx_ / (1 + a_s.n)
-			if b > best_s:
-				best_s = b
-				best_a = action
+			puct_score = action_stat.q + c_puct * p_ * xx_ / (1 + action_stat.n)
+			if puct_score > best_score:
+				best_score = puct_score
+				best_action = action
 
-		return best_a
+		return best_action
 
 	def apply_temperature(self, policy, turn):
 		"""
 		Applies a random fluctuation to probability of choosing various actions
 		:param policy: list of probabilities of taking each action
 		:param turn: number of turns that have occurred in the game so far
-		:return: policy, randomly perturbed based on the temperature. High temp = more perturbation. Low temp
-			= less.
+		:return: policy, randomly perturbed based on the temperature. High temp = more perturbation. Low temp = less.
 		"""
 		tau = np.power(self.play_config.tau_decay_rate, turn + 1)
 		if tau < 0.1:
@@ -303,7 +298,8 @@ class ChessPlayer:
 			return ret
 
 	def calc_policy(self, env):
-		"""calc π(a|s0)
+		"""
+		calc π(a|s0)
 		:return list(float): a list of probabilities of taking each action, calculated based on visit counts.
 		"""
 		state = state_key(env)
