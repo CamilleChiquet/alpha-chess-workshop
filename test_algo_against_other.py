@@ -18,6 +18,8 @@ if __name__ == "__main__":
 	sys.setrecursionlimit(10000)
 	import manager
 
+	white_model_path = "data/model/new"
+	black_model_path = "data/model/old"
 	# model_1 is white, model_2 plays as black player
-	manager.start(worker="duel", config_type="normal", model_1_path="data/model/new", model_2_path="data/model/old",
+	manager.start(worker="duel", config_type="normal", model_1_path=white_model_path, model_2_path=black_model_path,
 	              deterministic=True)

@@ -14,7 +14,7 @@ from keras.optimizers import Adam
 
 from agent.model_chess import ChessModel
 from config import Config
-from env.chess_env import canon_input_planes, is_black_turn, testeval
+from env.chess_env import canon_input_planes, is_black_turn
 from lib.data_helper import get_game_data_filenames, read_pickle_object, get_next_generation_model_dirs
 from lib.model_helper import load_best_model_weight
 
@@ -100,7 +100,7 @@ class OptimizeWorker:
 			self.steps_since_last_loss_improvment = 0
 		else:
 			self.steps_since_last_loss_improvment += 1
-			if self.steps_since_last_loss_improvment > self.config.trainer.loss_patience:
+			if self.steps_since_last_loss_improvment >= self.config.trainer.loss_patience:
 				self.steps_since_last_loss_improvment = 0
 				self.last_best_loss = loss
 				self.lr /= 2.0
@@ -150,7 +150,7 @@ class OptimizeWorker:
 		                            # validation_split=0.05
 		                            verbose=2)
 
-	def compile_model(self, lr: float = 0.001):
+	def compile_model(self, lr: float):
 		"""
 		Compiles the model to use optimizer and loss function tuned for supervised learning
 		"""

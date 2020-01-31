@@ -9,7 +9,7 @@ import numpy as np
 
 from agent.model_chess import ChessModel
 from agent.player_chess import ChessPlayer
-from config import Config, PlayWithHumanConfig
+from config import Config
 from env.chess_env import ChessEnv, Winner
 from lib.data_helper import pretty_print
 
@@ -42,7 +42,7 @@ class DuelWorker:
 		self.config.play.noise_eps = 0
 
 		if deterministic:
-			self.config.play.c_puct = 1 # lower  = prefer mean action value
+			self.config.play.c_puct = 1  # lower  = prefer mean action value
 			self.config.play.tau_decay_rate = 0  # start deterministic mode
 			self.config.play.resign_threshold = None
 
