@@ -60,8 +60,10 @@ class SupervisedLearningWorker:
 				games = get_games_from_file(filename)
 				print("done reading")
 				for res in as_completed([executor.submit(get_buffer, self.config, game) for game in games]):
+					env, fen_data, moves_array, scores_array, success = res.result()
+					if not success:
+						continue
 					self.idx += 1
-					env, fen_data, moves_array, scores_array = res.result()
 					self.save_data(fen_data, moves_array, scores_array)
 
 		if len(self.fen_buffer) > 0:
@@ -139,6 +141,11 @@ def get_buffer(config, game) -> (ChessEnv, list):
 	white = ChessPlayer(config, dummy=True)
 	black = ChessPlayer(config, dummy=True)
 	result = game.headers["Result"]
+
+	# Rare cases where elo ratings are not in the headers
+	if "WhiteElo" not in game.headers or "BlackElo" not in game.headers:
+		return None, None, None, None, False
+
 	white_elo, black_elo = int(game.headers["WhiteElo"]), int(game.headers["BlackElo"])
 	white_weight = clip_elo_policy(config, white_elo)
 	black_weight = clip_elo_policy(config, black_elo)
@@ -183,4 +190,4 @@ def get_buffer(config, game) -> (ChessEnv, list):
 			moves_array[i * 2 + 1] = black.moves[i][1]
 			scores[i * 2 + 1] = black.moves[i][2]
 
-	return env, fen_data, moves_array, scores
+	return env, fen_data, moves_array, scores, True
