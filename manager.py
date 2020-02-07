@@ -39,6 +39,9 @@ def start(worker: str, config_type: str = "normal", model_1_path: str = None,
 	elif worker == 'uci':
 		from play_game import uci
 		return uci.start(config)
+	elif worker == 'self':
+		from worker import self
+		return self.start(config)
 	elif worker == 'duel':
 		from worker import duel
 		return duel.start(config, model_1_path=model_1_path, model_2_path=model_2_path, deterministic=deterministic)
