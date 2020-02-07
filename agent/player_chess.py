@@ -111,8 +111,7 @@ class ChessPlayer:
 		"""
 		self.reset()
 
-		# for tl in range(self.play_config.thinking_loop):
-		root_value, naked_value = self.search_moves(env)
+		root_value = self.search_moves(env)
 		policy = self.calc_policy(env)
 		my_action = int(np.random.choice(range(self.labels_n), p=self.apply_temperature(policy, env.num_halfmoves)))
 
@@ -140,7 +139,7 @@ class ChessPlayer:
 
 		vals = [f.result() for f in futures]
 
-		return np.max(vals), vals[0]  # vals[0] is kind of racy
+		return np.max(vals)
 
 	def search_my_move(self, env: ChessEnv, is_root_node=False) -> float:
 		"""
@@ -217,6 +216,7 @@ class ChessPlayer:
 	def predict(self, state_planes):
 		"""
 		Gets a prediction from the policy and value network
+
 		:param state_planes: the observation state represented as planes
 		:return (float,float): policy (prior probability of taking the action leading to this state)
 			and value network (value of the state) prediction for this state.
@@ -254,7 +254,7 @@ class ChessPlayer:
 
 		xx_ = np.sqrt(my_visitstats.sum_n + 1)  # sqrt of sum(N(s, b); for all b)
 
-		e = self.play_config.noise_eps
+		noise_eps = self.play_config.noise_eps
 		c_puct = self.play_config.c_puct
 		dir_alpha = self.play_config.dirichlet_alpha
 
@@ -268,7 +268,7 @@ class ChessPlayer:
 		for action, action_stat in my_visitstats.a.items():
 			p_ = action_stat.p
 			if is_root_node:
-				p_ = (1 - e) * p_ + e * noise[i]
+				p_ = (1 - noise_eps) * p_ + noise_eps * noise[i]
 				i += 1
 			puct_score = action_stat.q + c_puct * p_ * xx_ / (1 + action_stat.n)
 			if puct_score > best_score:
@@ -332,9 +332,7 @@ class ChessPlayer:
 		"""
 		When game is done, updates the value of all past moves based on the result.
 
-		:param self:
 		:param z: win=1, lose=-1, draw=0
-		:return:
 		"""
 		for move in self.moves:  # add this game winner result to all past moves.
 			move += [z]
