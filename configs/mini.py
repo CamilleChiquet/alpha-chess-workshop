@@ -51,11 +51,11 @@ class TrainerConfig:
 
 		self.dataset_size = 100_000
 
-		# Learning rate paramters
-		self.start_lr = 0.005
-		self.min_lr = 1e-7
-		# If there is no improvement in the X last iteration(s), then the learning rate is lowered
-		self.loss_patience = 8
+		# Learning rate parameters
+		self.start_lr = 0.0027
+		self.min_lr = 1e-4
+		# If there is no improvement in the last X iteration(s), then the learning rate is lowered
+		self.loss_patience = 25
 
 		# When training has started, enter the following command in a terminal
 		# > tensorboard --logdir=[replace by your logs directory]

@@ -8,7 +8,7 @@ class EvaluateConfig:
 		self.game_num = 50
 		self.replace_rate = 0.55
 		self.play_config = PlayConfig()
-		self.play_config.simulation_num_per_move = 800
+		self.play_config.simulation_num_per_move = 400
 		self.play_config.thinking_loop = 1
 		self.play_config.c_puct = 1  # lower  = prefer mean action value
 		self.play_config.tau_decay_rate = 0.6  # I need a better distribution...
@@ -50,11 +50,11 @@ class TrainerConfig:
 
 		self.dataset_size = 100_000
 
-		# Learning rate paramters
-		self.start_lr = 0.005
-		self.min_lr = 1e-6
-		# If there is no improvement in the X last iteration(s), then the learning rate is lowered
-		self.loss_patience = 8
+		# Learning rate parameters
+		self.start_lr = 0.0027
+		self.min_lr = 1e-4
+		# If there is no improvement in the last X iteration(s), then the learning rate is lowered
+		self.loss_patience = 25
 
 		# When training has started, enter the following command in a terminal
 		# > tensorboard --logdir=[replace by your logs directory]
