@@ -15,7 +15,6 @@ class PlayWithHumanConfig:
 
 	def __init__(self):
 		self.simulation_num_per_move = 1600
-		self.threads_multiplier = 2
 		self.c_puct = 1  # lower  = prefer mean action value
 		self.noise_eps = 0
 		self.tau_decay_rate = 0  # start deterministic mode
@@ -27,7 +26,6 @@ class PlayWithHumanConfig:
 		:return:
 		"""
 		pc.simulation_num_per_move = self.simulation_num_per_move
-		pc.search_threads *= self.threads_multiplier
 		pc.c_puct = self.c_puct
 		pc.noise_eps = self.noise_eps
 		pc.tau_decay_rate = self.tau_decay_rate

@@ -10,13 +10,14 @@ from multiprocessing import Manager
 from time import time
 
 import numpy as np
+import keras
 
 from agent.model_chess import ChessModel
 from agent.player_chess import ChessPlayer
 from config import Config
 from env.chess_env import ChessEnv, Winner
 from lib.data_helper import save_as_pickle_object, pretty_print
-from lib.model_helper import load_best_model_weight, save_as_best_model, reload_best_model_weight_if_changed
+from lib.model_helper import load_best_model_weight, save_as_best_model
 
 logger = getLogger(__name__)
 
@@ -53,6 +54,8 @@ class SelfPlayWorker:
 		"""
 		Do self play and write the data to the appropriate file.
 		"""
+		keras.backend.set_learning_phase(0)
+
 		self.fen_buffer = []
 		self.moves_buffer = []
 		self.scores_buffer = []
@@ -71,16 +74,18 @@ class SelfPlayWorker:
 				      f"{'by resign ' if env.resigned else '          '}")
 
 				pretty_print(env, ("current_model", "current_model"))
-				self.fen_buffer += fen_data
-				self.moves_buffer += moves_array
-				self.scores_buffer += scores_array
+				self.fen_buffer.append(fen_data)
+				self.moves_buffer.append(moves_array)
+				self.scores_buffer.append(scores_array)
 				if (game_idx % self.config.play_data.nb_game_in_file) == 0:
 					self.flush_buffer()
-					reload_best_model_weight_if_changed(self.current_model)
+				if game_idx >= self.config.play_data.nb_game_between_training_sessions:
+					break
 				futures.append(executor.submit(self_play_buffer, self.config, cur=self.cur_pipes))  # Keep it going
 
-		if len(data) > 0:
-			self.flush_buffer()
+		self.flush_buffer()
+
+		keras.backend.set_learning_phase(1)
 
 	def load_model(self):
 		"""
@@ -97,6 +102,9 @@ class SelfPlayWorker:
 		"""
 		Flush the play data buffer and write the data to the appropriate location
 		"""
+		if len(self.fen_buffer) == 0:
+			return
+
 		rc = self.config.resource
 		game_id = datetime.now().strftime("%Y%m%d-%H%M%S.%f")
 		path = os.path.join(rc.play_data_dir, rc.play_data_filename_tmpl % game_id)

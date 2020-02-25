@@ -79,7 +79,7 @@ class SupervisedLearningWorker:
 		self.fen_buffer.append(fen_data)
 		self.moves_buffer.append(moves_array)
 		self.scores_buffer.append(scores_array)
-		if self.idx % self.config.play_data.sl_nb_game_in_file == 0:
+		if self.idx % self.config.play_data.nb_game_in_file == 0:
 			self.flush_buffer()
 
 	def flush_buffer(self):

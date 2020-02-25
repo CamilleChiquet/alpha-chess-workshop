@@ -41,9 +41,12 @@ class DuelWorker:
 		self.config.play.simulation_num_per_move = 200
 		self.config.play.c_puct = 1  # lower  = prefer mean action value
 		self.config.play.resign_threshold = None
+		self.config.play.max_processes = 1
+		self.config.play.search_threads = 16
+		self.config.play.noise_eps = 0
+		self.config.play.tau_decay_rate = 0.7
 
 		if deterministic:
-			self.config.play.noise_eps = 0
 			self.config.play.tau_decay_rate = 0  # start deterministic mode
 
 		self.current_model_1 = self.load_model(model_1_path)

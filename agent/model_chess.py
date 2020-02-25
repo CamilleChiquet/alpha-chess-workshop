@@ -21,136 +21,143 @@ logger = getLogger(__name__)
 
 
 class ChessModel:
-	"""
-	The model which can be trained to take observations of a game of chess and return value and policy
-	predictions.
+    """
+    The model which can be trained to take observations of a game of chess and return value and policy
+    predictions.
 
-	Attributes:
-		:ivar Config config: configuration to use
-		:ivar Model model: the Keras model to use for predictions
-		:ivar digest: basically just a hash of the file containing the weights being used by this model
-		:ivar ChessModelAPI api: the api to use to listen for and then return this models predictions (on a pipe).
-	"""
+    Attributes:
+        :ivar Config config: configuration to use
+        :ivar Model model: the Keras model to use for predictions
+        :ivar digest: basically just a hash of the file containing the weights being used by this model
+        :ivar ChessModelAPI api: the api to use to listen for and then return this models predictions (on a pipe).
+    """
 
-	def __init__(self, config: Config):
-		self.config = config
-		self.model = None  # type: Model
-		self.digest = None
-		self.api = None
+    def __init__(self, config: Config):
+        self.config = config
+        self.model = None  # type: Model
+        self.digest = None
+        self.api = None
 
-	def get_pipes(self, num=1):
-		"""
-		Creates a list of pipes on which observations of the game state will be listened for. Whenever
-		an observation comes in, returns policy and value network predictions on that pipe.
+    def get_pipes(self, num=1):
+        """
+        Creates a list of pipes on which observations of the game state will be listened for. Whenever
+        an observation comes in, returns policy and value network predictions on that pipe.
 
-		:param int num: number of pipes to create
-		:return str(Connection): a list of all connections to the pipes that were created
-		"""
-		if self.api is None:
-			self.api = ChessModelAPI(self)
-			self.api.start()
-		return [self.api.create_pipe() for _ in range(num)]
+        :param int num: number of pipes to create
+        :return str(Connection): a list of all connections to the pipes that were created
+        """
+        if self.api is None:
+            self.api = ChessModelAPI(self)
+            self.api.start()
+        return [self.api.create_pipe() for _ in range(num)]
 
-	def build(self):
-		"""
-		Builds the full Keras model and stores it in self.model.
-		Why biases are set to False : https://github.com/kuangliu/pytorch-cifar/issues/52
-		"""
-		mc = self.config.model
-		in_x = x = Input((18, 8, 8))
+    def build(self):
+        """
+        Builds the full Keras model and stores it in self.model.
+        Why biases are set to False : https://github.com/kuangliu/pytorch-cifar/issues/52
+        """
 
-		# (batch, channels, height, width)
-		x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_first_filter_size, padding="same",
-		           data_format="channels_first", use_bias=False,
-		           name="input_conv-" + str(mc.cnn_first_filter_size) + "-" + str(mc.cnn_filter_num))(x)
-		x = BatchNormalization(axis=1, name="input_batchnorm")(x)
-		x = Activation("relu", name="input_relu")(x)
+        logger.debug(f"Building new model.")
+        mc = self.config.model
+        in_x = x = Input((18, 8, 8))
 
-		for i in range(mc.res_layer_num):
-			x = self._build_residual_block(x, i + 1)
+        # (batch, channels, height, width)
+        x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_first_filter_size, padding="same",
+                   data_format="channels_first", use_bias=False,
+                   name="input_conv-" + str(mc.cnn_first_filter_size) + "-" + str(mc.cnn_filter_num))(x)
+        x = BatchNormalization(axis=1, name="input_batchnorm")(x)
+        x = Activation("relu", name="input_relu")(x)
 
-		res_out = x
+        for i in range(mc.common_res_layer_num):
+            x = self._build_residual_block(x, i + 1)
 
-		# for policy output
-		x = Conv2D(filters=2, kernel_size=1, data_format="channels_first", use_bias=False,
-		           name="policy_conv-1-2")(res_out)
-		x = BatchNormalization(axis=1, name="policy_batchnorm")(x)
-		x = Activation("relu", name="policy_relu")(x)
-		x = Flatten(name="policy_flatten")(x)
-		# no output for 'pass'
-		policy_out = Dense(self.config.n_labels, activation="softmax", name="policy_out")(x)
+        x_policy = x
+        x_value = x
 
-		# for value output
-		x = Conv2D(filters=4, kernel_size=1, data_format="channels_first", use_bias=False,
-		           name="value_conv-1-4")(res_out)
-		x = BatchNormalization(axis=1, name="value_batchnorm")(x)
-		x = Activation("relu", name="value_relu")(x)
-		x = Flatten(name="value_flatten")(x)
-		x = Dense(mc.value_fc_size, activation="relu", name="value_dense")(x)
-		value_out = Dense(1, activation="tanh", name="value_out")(x)
+        # for policy output
+        for i in range(mc.policy_res_layer_num):
+            x_policy = self._build_residual_block(x_policy, mc.common_res_layer_num + i + 1)
 
-		self.model = Model(in_x, [policy_out, value_out], name="chess_model")
+        x = Conv2D(filters=32, kernel_size=1, data_format="channels_first", use_bias=False,
+                   name="policy_conv-1-2")(x_policy)
+        x = BatchNormalization(axis=1, name="policy_batchnorm")(x)
+        x = Activation("relu", name="policy_relu")(x)
+        x = Flatten(name="policy_flatten")(x)
+        # no output for 'pass'
+        policy_out = Dense(self.config.n_labels, activation="softmax", name="policy_out")(x)
 
-	def _build_residual_block(self, x, index):
-		mc = self.config.model
-		in_x = x
-		res_name = "res" + str(index)
-		x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_filter_size, padding="same",
-		           data_format="channels_first", use_bias=False,
-		           name=res_name + "_conv1-" + str(mc.cnn_filter_size) + "-" + str(mc.cnn_filter_num))(x)
-		x = BatchNormalization(axis=1, name=res_name + "_batchnorm1")(x)
-		x = Activation("relu", name=res_name + "_relu1")(x)
-		x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_filter_size, padding="same",
-		           data_format="channels_first", use_bias=False,
-		           name=res_name + "_conv2-" + str(mc.cnn_filter_size) + "-" + str(mc.cnn_filter_num))(x)
-		x = BatchNormalization(axis=1, name="res" + str(index) + "_batchnorm2")(x)
-		x = Add(name=res_name + "_add")([in_x, x])
-		x = Activation("relu", name=res_name + "_relu2")(x)
-		return x
+        for i in range(mc.value_res_layer_num):
+            x_value = self._build_residual_block(x_value, mc.common_res_layer_num + mc.policy_res_layer_num + i + 1)
 
-	@staticmethod
-	def fetch_digest(weight_path):
-		if os.path.exists(weight_path):
-			m = hashlib.sha256()
-			with open(weight_path, "rb") as f:
-				m.update(f.read())
-			return m.hexdigest()
+        # for value output
+        x = Conv2D(filters=4, kernel_size=1, data_format="channels_first", use_bias=False,
+                   name="value_conv-1-4")(x_value)
+        x = BatchNormalization(axis=1, name="value_batchnorm")(x)
+        x = Activation("relu", name="value_relu")(x)
+        x = Flatten(name="value_flatten")(x)
+        x = Dense(mc.value_fc_size, activation="relu", name="value_dense", use_bias=False)(x)
+        x = BatchNormalization(name="value_batchnorm_2")(x)
+        value_out = Dense(1, activation="tanh", name="value_out")(x)
 
-	def load(self, config_path, weight_path, continue_training: bool = True):
-		"""
+        self.model = Model(in_x, [policy_out, value_out], name="chess_model")
 
-		:param str config_path: path to the file containing the entire configuration
-		:param str weight_path: path to the file containing the model weights
-		:return: true iff successful in loading
-		"""
+    def _build_residual_block(self, x, index):
+        mc = self.config.model
+        in_x = x
+        res_name = "res" + str(index)
+        x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_filter_size, padding="same",
+                   data_format="channels_first", use_bias=False,
+                   name=res_name + "_conv1-" + str(mc.cnn_filter_size) + "-" + str(mc.cnn_filter_num))(x)
+        x = BatchNormalization(axis=1, name=res_name + "_batchnorm1")(x)
+        x = Activation("relu", name=res_name + "_relu1")(x)
+        x = Conv2D(filters=mc.cnn_filter_num, kernel_size=mc.cnn_filter_size, padding="same",
+                   data_format="channels_first", use_bias=False,
+                   name=res_name + "_conv2-" + str(mc.cnn_filter_size) + "-" + str(mc.cnn_filter_num))(x)
+        x = BatchNormalization(axis=1, name="res" + str(index) + "_batchnorm2")(x)
+        x = Add(name=res_name + "_add")([in_x, x])
+        x = Activation("relu", name=res_name + "_relu2")(x)
+        return x
 
-		if os.path.exists(config_path) and continue_training:
-			logger.debug(f"loading model from {config_path}")
-			with open(config_path, "rt") as f:
-				self.model = Model.from_config(json.load(f))
-			if os.path.exists(weight_path):
-				self.model.load_weights(weight_path)
-			self.model._make_predict_function()
-			self.digest = self.fetch_digest(weight_path)
-			logger.debug(f"loaded model digest = {self.digest}")
-			return True
-		else:
-			if not continue_training:
-				logger.debug(f"model files does not exist at {config_path} and {weight_path}")
-			else:
-				logger.debug(f"A new model will be created.")
-			self.build()
-			return True
+    @staticmethod
+    def fetch_digest(weight_path):
+        if os.path.exists(weight_path):
+            m = hashlib.sha256()
+            with open(weight_path, "rb") as f:
+                m.update(f.read())
+            return m.hexdigest()
 
-	def save(self, config_path, weight_path):
-		"""
+    def load(self, config_path=None, weight_path=None):
+        """
 
-		:param str config_path: path to save the entire configuration to
-		:param str weight_path: path to save the model weights to
-		"""
-		logger.debug(f"save model to {config_path}")
-		with open(config_path, "wt") as f:
-			json.dump(self.model.get_config(), f)
-			self.model.save_weights(weight_path)
-		self.digest = self.fetch_digest(weight_path)
-		logger.debug(f"saved model digest {self.digest}")
+        :param str config_path: path to the file containing the entire configuration
+        :param str weight_path: path to the file containing the model weights
+        :return: true if successful in loading
+        """
+
+        if os.path.exists(config_path):
+            logger.debug(f"loading model from {config_path}")
+            with open(config_path, "rt") as f:
+                self.model = Model.from_config(json.load(f))
+            if os.path.exists(weight_path):
+                self.model.load_weights(weight_path)
+            self.model._make_predict_function()
+            self.digest = self.fetch_digest(weight_path)
+            logger.debug(f"loaded model digest = {self.digest}")
+            return True
+        else:
+            logger.debug(f"model files does not exist at {config_path} and {weight_path}")
+            self.build()
+            return True
+
+    def save(self, config_path, weight_path):
+        """
+
+        :param str config_path: path to save the entire configuration to
+        :param str weight_path: path to save the model weights to
+        """
+        logger.debug(f"save model to {config_path}")
+        with open(config_path, "wt") as f:
+            json.dump(self.model.get_config(), f)
+            self.model.save_weights(weight_path)
+        self.digest = self.fetch_digest(weight_path)
+        logger.debug(f"saved model digest {self.digest}")

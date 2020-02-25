@@ -285,7 +285,7 @@ class ChessPlayer:
 		:return: policy, randomly perturbed based on the temperature. High temp = more perturbation. Low temp = less.
 		"""
 		tau = np.power(self.play_config.tau_decay_rate, turn + 1)
-		if tau < 0.1:
+		if tau < 0.1 or turn > self.play_config.zero_temperature_half_move:
 			tau = 0
 		if tau == 0:
 			action = np.argmax(policy)

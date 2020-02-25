@@ -11,7 +11,7 @@ logger = getLogger(__name__)
 
 
 def start(worker: str, config_type: str = "normal", model_1_path: str = None,
-          model_2_path: str = None, deterministic: bool = False):
+          model_2_path: str = None, deterministic: bool = False, rl: bool = False):
 	"""
 	Starts one of the processes based on given arguments.
 
@@ -29,7 +29,7 @@ def start(worker: str, config_type: str = "normal", model_1_path: str = None,
 
 	if worker == 'opt':
 		from worker import optimize
-		return optimize.start(config)
+		return optimize.start(config, rl=rl)
 	elif worker == 'eval':
 		from worker import evaluate
 		return evaluate.start(config)

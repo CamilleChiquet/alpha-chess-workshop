@@ -6,46 +6,45 @@ version of the agent that is easier and quicker to run locally
 
 class EvaluateConfig:
 	def __init__(self):
-		self.game_num = 50
+		self.game_num = 100
 		self.replace_rate = 0.55
 		self.play_config = PlayConfig()
 		self.play_config.simulation_num_per_move = 200
-		self.play_config.thinking_loop = 1
 		self.play_config.c_puct = 1  # lower  = prefer mean action value
 		self.play_config.tau_decay_rate = 0.6  # I need a better distribution...
 		self.play_config.noise_eps = 0
 		self.evaluate_latest_first = True
-		self.max_game_length = 1_000
+		self.max_game_length = 200
 
 
 class PlayDataConfig:
 	def __init__(self):
 		self.min_elo_policy = 500  # 0 weight
-		self.max_elo_policy = 2_000  # 1 weight
-		self.sl_nb_game_in_file = 250
-		self.nb_game_in_file = 50
+		self.max_elo_policy = 1_800  # 1 weight
+		self.nb_game_in_file = 250
+		self.nb_game_between_training_sessions = 2_000
 
 
 class PlayConfig:
 	def __init__(self):
-		self.max_processes = 3
+		self.max_processes = 1
 		self.search_threads = 16
-		self.simulation_num_per_move = 800
-		self.thinking_loop = 1
-		self.logging_thinking = False
+		self.simulation_num_per_move = 200
 		self.c_puct = 1.5
 		self.noise_eps = 0.25
 		self.dirichlet_alpha = 0.3
-		self.tau_decay_rate = 0.99
+		self.tau_decay_rate = 1.0
+		self.zero_temperature_half_move = 30
 		self.virtual_loss = 3
 		self.resign_threshold = -0.8
 		self.min_resign_turn = 5
-		self.max_game_length = 1_000
+		self.max_game_length = 200
 
 
 class TrainerConfig:
 	def __init__(self):
 		self.cleaning_processes = 6  # RAM explosion...
+		self.nb_recent_files_for_training = 800
 
 		self.batch_size = 128  # tune this to your gpu memory
 
